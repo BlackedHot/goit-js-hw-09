@@ -1,55 +1,73 @@
-import flatpickr from 'flatpickr';
-import 'flatpickr/dist/flatpickr.min.css';
-import { Report } from 'notiflix/build/notiflix-report-aio';
+// Описаний в документації
+import flatpickr from "flatpickr";
+// Додатковий імпорт стилів
+import "flatpickr/dist/flatpickr.min.css";
+import { Notify } from 'notiflix/build/notiflix-notify-aio';
 
-const startBtn = document.querySelector('button[data-start]');
-const daysValue = document.querySelector('[data-days]');
-const hoursValue = document.querySelector('[data-hours]');
-const minutesValue = document.querySelector('[data-minutes]');
-const secondsValue = document.querySelector('[data-seconds]');
+const btnStart = document.querySelector("[data-start]");
+const timerEl = document.querySelector(".timer")
+btnStart.disabled = true;
 
-flatpickr("input[type='text']", {
-  enableTime: true,
-  time_24hr: true,
-  defaultDate: new Date(),
-  minuteIncrement: 1,
-  onClose(selectedDates) {
-    console.log(selectedDates[0]);
-    const inputDate = new Date(selectedDates);
-    const currentDate = new Date();
-
-    if (inputDate < currentDate) {
-      startBtn.setAttribute('disabled', 'disabled');
-      return Report.failure(
-        'Wrong date',
-        'Please choose a date in the future',
-        'Okay'
-      );
-    } else {
-      startBtn.removeAttribute('disabled', 'disabled');
-    }
-
-    startBtn.addEventListener('click', () => {
-      let timerInterval = setInterval(() => {
-        const ms = inputDate.getTime() - new Date().getTime();
-        const timeLeft = convertMs(ms);
-
-        daysValue.textContent = addLeadingZero(timeLeft.days);
-        hoursValue.textContent = addLeadingZero(timeLeft.hours);
-        minutesValue.textContent = addLeadingZero(timeLeft.minutes);
-        secondsValue.textContent = addLeadingZero(timeLeft.seconds);
-
-        if (ms <= 0) {
-          clearInterval(timerInterval);
-          daysValue.textContent = '00';
-          hoursValue.textContent = '00';
-          minutesValue.textContent = '00';
-          secondsValue.textContent = '00';
+let timerId = null;
+let timerDeadLine = null;
+Notify.init({
+  width: '360px',
+  position: 'center-top',
+  distance: '45px',
+  opacity: 1,
+  
+});
+flatpickr("#datetime-picker", {
+    enableTime: true,
+    time_24hr: true,
+    defaultDate: Date.now(),
+    minuteIncrement: 1,
+    onClose(selectedDates) {
+        timerDeadLine = selectedDates[0];
+        if (selectedDates[0] < Date.now()) {
+             btnStart.disabled = true;
+           Notify.info("Please choose a date in the FUTURE");
+        } else {
+            btnStart.disabled = false;
         }
-      }, 1000);
-    });
+    console.log(selectedDates[0]);
   },
 });
+
+
+btnStart.addEventListener("click", startCount);
+
+function startCount() {
+  timerId = setInterval(() => {
+    const currentTime = Date.now();
+    const diff = timerDeadLine - currentTime;
+    if (diff <= 0) {
+      clearInterval(timerId);
+      return Notify.info("CONGRATULATIONS MA BRO");
+    }
+    const timeRemaining = convertMs(diff);
+    timerEl.querySelector('[data-days]').textContent = formatTime(
+      timeRemaining.days
+    );
+    timerEl.querySelector('[data-hours]').textContent = formatTime(
+      timeRemaining.hours
+    );
+    timerEl.querySelector('[data-minutes]').textContent = formatTime(
+      timeRemaining.minutes
+    );
+    timerEl.querySelector('[data-seconds]').textContent = formatTime(
+      timeRemaining.seconds
+    );
+  }, 1000);
+}
+
+
+
+function formatTime(time) {
+    return time.toString().padStart(2, "0");
+  }
+
+
 
 function convertMs(ms) {
   // Number of milliseconds per unit of time
@@ -70,6 +88,6 @@ function convertMs(ms) {
   return { days, hours, minutes, seconds };
 }
 
-function addLeadingZero(value) {
-  return String(value).padStart(2, '0');
-}
+console.log(convertMs(2000)); // {days: 0, hours: 0, minutes: 0, seconds: 2}
+console.log(convertMs(140000)); // {days: 0, hours: 0, minutes: 2, seconds: 20}
+console.log(convertMs(24140000)); // {days: 0, hours: 6 minutes: 42, seconds: 20}
